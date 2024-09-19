@@ -1,8 +1,6 @@
 # Supermaven for Emacs
 
-![Supermaven Logo](https://raw.githubusercontent.com/crazywolf132/supermaven.el/main/images/logo.png)
-
-Supermaven is an AI-powered code completion plugin for Emacs, converted from the official [Supermaven Neovim plugin](https://github.com/supermaven/supermaven-nvim).
+Supermaven is an AI-powered code completion plugin for Emacs, converted from the official [Supermaven Neovim plugin](https://github.com/supermaven-inc/supermaven-nvim).
 
 ## Features
 
