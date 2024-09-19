@@ -8,6 +8,7 @@
 
 (require 'url)
 (require 'json)
+(require 'supermaven-logger)
 
 (defcustom supermaven-binary-path nil
   "Path to the Supermaven binary."
@@ -20,24 +21,28 @@
                      ('darwin "macosx")
                      ('gnu/linux "linux")
                      ('windows-nt "windows")
-                     (_ (error "Unsupported platform"))))
-         (arch (pcase system-configuration
-                 ((or "x86_64-apple-darwin" "x86_64-pc-linux-gnu" "x86_64-w64-mingw32") "x86_64")
-                 ((or "aarch64-apple-darwin" "aarch64-pc-linux-gnu") "aarch64")
-                 (_ (error "Unsupported architecture"))))
+                     (_ (error "Unsupported platform: %s" system-type))))
+         (arch (cond
+                ((string-match-p "^arm64-" system-configuration) "aarch64")
+                ((string-match-p "^x86_64-" system-configuration) "x86_64")
+                (t (error "Unsupported architecture: %s" system-configuration))))
          (url (format "https://supermaven.com/api/download-path?platform=%s&arch=%s&editor=emacs" platform arch))
+         (_ (supermaven-log-debug (format "Fetching binary URL: %s" url)))
          (response (with-current-buffer
                        (url-retrieve-synchronously url)
                      (goto-char (point-min))
                      (re-search-forward "\n\n")
-                     (json-read)))
-         (download-url (cdr (assoc 'downloadUrl response)))
+                     (let ((json-object-type 'hash-table))
+                       (json-read))))
+         (download-url (gethash "downloadUrl" response))
+         (_ (supermaven-log-debug (format "Download URL: %s" download-url)))
          (binary-dir (expand-file-name ".supermaven/binary/v15" (getenv "HOME")))
          (binary-path (expand-file-name (format "sm-agent%s" (if (eq system-type 'windows-nt) ".exe" "")) binary-dir)))
 
     (unless (file-exists-p binary-dir)
       (make-directory binary-dir t))
 
+    (supermaven-log-info (format "Downloading Supermaven binary to %s" binary-path))
     (url-copy-file download-url binary-path t)
 
     (set-file-modes binary-path #o755)
@@ -48,7 +53,11 @@
 (defun supermaven--ensure-binary ()
   "Ensure the Supermaven binary is available."
   (unless (and supermaven-binary-path (file-exists-p supermaven-binary-path))
-    (setq supermaven-binary-path (supermaven--fetch-binary))))
+    (condition-case err
+        (setq supermaven-binary-path (supermaven--fetch-binary))
+      (error
+       (supermaven-log-error (format "Failed to fetch Supermaven binary: %s" (error-message-string err)))
+       (signal (car err) (cdr err))))))
 
 (provide 'supermaven-binary)
 
