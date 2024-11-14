@@ -29,6 +29,10 @@
 (defvar supermaven--buffer " *supermaven*"
   "The name of the Supermaven process buffer.")
 
+(defun supermaven--generate-state-id ()
+  "Generate a unique state identifier."
+  (format "%x" (random #xffffffff)))
+
 (defun supermaven-start ()
   "Start the Supermaven process."
   (interactive)
@@ -81,7 +85,10 @@
   "Send greeting message to the Supermaven process."
   (supermaven--send-message
    `((kind . "greeting")
-     (allowGitignore . :json-false))))
+     (allowGitignore . :json-false)
+     (projectType . "rust")  ; adjust based on current project
+     (language . "en")
+     (clientVersion . "0.1"))))
 
 (defun supermaven--send-message (message)
   "Send MESSAGE to the Supermaven process."

@@ -83,16 +83,42 @@
        (path . ,file-name)
        (offset . ,(1- (point)))))))
 
+
+(defun supermaven--send-state-update ()
+  "Send a state update message with file and cursor updates."
+  (when-let ((file-name (buffer-file-name)))
+    (let ((state-id (supermaven--generate-state-id)))
+      (supermaven--send-message
+       `((kind . "state_update")
+         (newId . ,state-id)
+         (updates . [
+                     ((kind . "file_update")
+                      (path . ,file-name)
+                      (content . ,(supermaven--get-buffer-text)))
+                     ((kind . "cursor_update")
+                      (path . ,file-name)
+                      (offset . ,(1- (point))))]))))))
+
+
 (defun supermaven--on-change (&rest _)
   "Handle buffer changes."
-  (when supermaven-mode
-    (supermaven--send-file-update)
-    (supermaven--send-cursor-update)))
+  (when (and supermaven-mode (buffer-file-name))
+    (supermaven-log-debug "Sending state update")
+    (condition-case err
+        (supermaven--send-state-update)
+      (error
+       (supermaven-log-error
+        (format "Error in on-change: %s" (error-message-string err)))))))
 
 (defun supermaven--on-post-command ()
   "Handle post-command events."
-  (when supermaven-mode
-    (supermaven--send-cursor-update)))
+  (when (and supermaven-mode (buffer-file-name))
+    (supermaven-log-debug "Sending state update on post-command")
+    (condition-case err
+        (supermaven--send-state-update)
+      (error
+       (supermaven-log-error
+        (format "Error in post-command: %s" (error-message-string err)))))))
 
 (define-minor-mode supermaven-mode
   "Minor mode for Supermaven."
