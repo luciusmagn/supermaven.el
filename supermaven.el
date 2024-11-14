@@ -100,23 +100,64 @@
 ;;     supermaven--process
 ;;     (concat (json-encode message) "\n"))))
 
+;;(defun supermaven--handle-output (output)
+;;  "Handle OUTPUT from the Supermaven process."
+;;  (dolist (line (split-string output "\n" t))
+;;    (when (string-prefix-p "SM-MESSAGE " line)
+;;      (let* ((json-string (substring line 11))
+;;             (message (json-read-from-string json-string)))
+;;        (supermaven--process-message message)))))
+
 (defun supermaven--handle-output (output)
   "Handle OUTPUT from the Supermaven process."
+  (supermaven-log-debug (format "Raw output received: %s" output))
   (dolist (line (split-string output "\n" t))
     (when (string-prefix-p "SM-MESSAGE " line)
       (let* ((json-string (substring line 11))
-             (message (json-read-from-string json-string)))
-        (supermaven--process-message message)))))
+             (message (condition-case err
+                          (json-read-from-string json-string)
+                        (error
+                         (supermaven-log-error
+                          (format "JSON parsing error: %s\nRaw string: %s"
+                                  (error-message-string err) json-string))
+                         nil))))
+        (when message
+          (supermaven-log-debug (format "Processed message: %s" message))
+          (supermaven--process-message message))))))
+
+;;(defun supermaven--process-message (message)
+;;  "Process MESSAGE received from Supermaven."
+;;  (pcase (alist-get 'kind message)
+;;    ("response" (supermaven--handle-response message))
+;;    ("metadata" (supermaven--handle-metadata message))
+;;    ("activation_request" (supermaven--handle-activation-request message))
+;;    ("activation_success" (supermaven--handle-activation-success message))
+;;    ("service_tier" (supermaven--handle-service-tier message))
+;;    (_ (supermaven-log-debug (format "Unknown message kind: %s" (alist-get 'kind message))))))
 
 (defun supermaven--process-message (message)
   "Process MESSAGE received from Supermaven."
+  (supermaven-log-debug (format "Processing message of kind: %s" (alist-get 'kind message)))
   (pcase (alist-get 'kind message)
-    ("response" (supermaven--handle-response message))
-    ("metadata" (supermaven--handle-metadata message))
-    ("activation_request" (supermaven--handle-activation-request message))
-    ("activation_success" (supermaven--handle-activation-success message))
-    ("service_tier" (supermaven--handle-service-tier message))
-    (_ (supermaven-log-debug (format "Unknown message kind: %s" (alist-get 'kind message))))))
+    ("response"
+     (supermaven-log-debug (format "Full response message: %s" message))
+     (supermaven--handle-response message))
+    ("metadata"
+     (supermaven-log-debug (format "Metadata message: %s" message))
+     (supermaven--handle-metadata message))
+    ("activation_request"
+     (supermaven-log-debug (format "Activation request message: %s" message))
+     (supermaven--handle-activation-request message))
+    ("activation_success"
+     (supermaven-log-debug (format "Activation success message: %s" message))
+     (supermaven--handle-activation-success message))
+    ("service_tier"
+     (supermaven-log-debug (format "Service tier message: %s" message))
+     (supermaven--handle-service-tier message))
+    (_
+     (supermaven-log-debug
+      (format "Unknown message kind: %s\nFull message: %s"
+              (alist-get 'kind message) message)))))
 
 (defun supermaven--handle-response (message)
   "Handle response MESSAGE from Supermaven."
