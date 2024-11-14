@@ -1,4 +1,4 @@
-;;; supermaven.el --- Supermaven for Emacs -*- lexical-binding: t; -*-
+;;; supermaven.el --- Supermaven for Support -*- lexical-binding: t; -*-
 
 
 ;; Author: Brayden Moon<crazywolf132@gmail.com>
@@ -86,9 +86,19 @@
 (defun supermaven--send-message (message)
   "Send MESSAGE to the Supermaven process."
   (when supermaven--process
-    (process-send-string
-     supermaven--process
-     (concat (json-encode message) "\n"))))
+    (let ((json-string (json-encode message)))
+      (supermaven-log-debug (format "Sending message: %s" json-string))
+      (process-send-string
+       supermaven--process
+       (concat json-string "\n")))))
+
+
+;;(defun supermaven--send-message (message)
+;;  "Send MESSAGE to the Supermaven process."
+;;  (when supermaven--process
+;;    (process-send-string
+;;     supermaven--process
+;;     (concat (json-encode message) "\n"))))
 
 (defun supermaven--handle-output (output)
   "Handle OUTPUT from the Supermaven process."
@@ -145,7 +155,7 @@
   (interactive)
   (if supermaven-activate-url
       (browse-url supermaven-activate-url)
-    (supermaven-log-error "Could not find an activation URL.")))
+    (supermaven-log-error "Could not find an activation URL")))
 
 (defun supermaven-logout ()
   "Log out from Supermaven."
