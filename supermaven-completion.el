@@ -47,11 +47,9 @@
   (supermaven--process-completion (gethash state-id supermaven--completion-state)))
 
 (defun supermaven--process-completion (items)
-  "Process completion ITEMS received from Supermaven."
   (when items
     (let* ((first-item (aref items 0))
-           (text-edit (cdr (assoc 'textEdit first-item)))
-           (new-text (cdr (assoc 'newText text-edit))))
+           (new-text (cdr (assoc 'text first-item))))
       (when new-text
         (supermaven--display-suggestion new-text)))))
 
